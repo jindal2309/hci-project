@@ -1,3 +1,9 @@
+<style type="text/css">
+    body {
+        overflow: hidden;
+    }
+</style>
+
 <div id="signDiv">
 	Username: <input id="signDiv-username" type="text"></input><br>
 	Password: <input id="signDiv-password" type="password"></input>
@@ -6,9 +12,9 @@
 </div>
 
 <div id="gameDiv" style="display:none;">
-	<canvas id="ctx" width="500" height="500" style="border:1px solid #000000;"></canvas>
+	<canvas id="ctx" style="border:1px solid #000000;"></canvas>
 
-	<div id="chat-text" style="width:500px; height:100px; overflow-y:scroll">
+	<div id="chat-text" style="width:500px; height:20%; overflow-y:scroll">
 		<div>CHATBOX......</div>
 	</div>
 
@@ -29,6 +35,10 @@
 	var signDivSignIn = document.getElementById('signDiv-signIn');
 	var signDivSignUp = document.getElementById('signDiv-signUp');
 	var signDivPassword = document.getElementById('signDiv-password');
+
+	let screenObj = window.screen;
+
+	// width: 1800px; height: 800px;
 	
 	signDivSignIn.onclick = function(){
 		socket.emit('signIn',{username:signDivUsername.value,password:signDivPassword.value});
@@ -38,8 +48,13 @@
 	}
 	socket.on('signInResponse',function(data){
 		if(data.success){
+			// socket.emit('set_payer_name', {username:signDivUsername.value});
 			signDiv.style.display = 'none';
 			gameDiv.style.display = 'inline-block';		//Equivalent of visible
+			var cc = document.getElementById("ctx")
+			cc.width  = window.innerWidth*90/100;
+			cc.height = window.innerHeight*75/100;
+
 		} else
 			alert("Invalid Username or Password.");
 	});
@@ -48,6 +63,10 @@
 			alert("Sign up successul.");
 		} else
 			alert("Username already in use!!");
+	});
+
+	socket.on('getShape', function(data){
+		socket.emit('window_shape', {height: window.innerHeight*75/100, width: window.innerWidth*90/100});
 	});
 
 
@@ -61,7 +80,7 @@
 	ctx.font = '30px Arial';
 
 	socket.on('newPositions', function(data){
-		ctx.clearRect(0, 0, 500, 500);
+		ctx.clearRect(0, 0, window.innerWidth*90/100, window.innerHeight*75/100);
 
 		for (var i = 0; i < data.player.length; i++) {
 			ctx.fillText(data.player[i].number, data.player[i].x, data.player[i].y);
@@ -78,7 +97,7 @@
 
 	chatForm.onsubmit = function(e){
 		e.preventDefault();				// Prevent refreshing of page
-		socket.emit('sendMsgToServer',chatInput.value);
+		socket.emit('sendMsgToServer',{username: signDivUsername.value, msg:chatInput.value});
 		chatInput.value = '';		
 	}
 
