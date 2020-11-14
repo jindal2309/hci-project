@@ -24,8 +24,11 @@ var Entity = function(){
 	}
 
 	self.updatePosition = function(){
-		self.x += self.spdX;
-		self.y += self.spdY;
+		if(self.x + self.spdX <= window_width-10 && self.x + self.spdX >= 0)
+			self.x += self.spdX;
+		
+		if(self.y + self.spdY <= window_height && self.y + self.spdY >= 10)
+			self.y += self.spdY;
 	}	
 
 	self.getDistance = function(pt){
@@ -35,7 +38,7 @@ var Entity = function(){
 	return self;
 }
 
-var Player = function(id){
+var Player = function(id, username){
 
 	var self = Entity();
 	self.id = id;
@@ -45,6 +48,7 @@ var Player = function(id){
 	self.move_up = false;
 	self.move_down = false;
 	self.speed = 10;
+	self.name = username;
 	
 	var super_update = self.update;
 	self.update = function(){
@@ -81,6 +85,8 @@ var Player = function(id){
 }
 
 Player.list = {};
+window_height = 0;
+window_width = 0;
 
 app.get('/',function(req,res){
 	res.sendFile(__dirname + '/client/index.html');
@@ -88,10 +94,13 @@ app.get('/',function(req,res){
 
 app.use('/client', express.static(__dirname + '/client'));
 
-server.listen(8000)
+server.listen(8001);
+console.log("Server listening at 8001");
 
-Player.onConnect = function(socket){
-	var player = Player(socket.id);
+Player.onConnect = function(socket, username){
+	socket.emit('getShape', {});
+	console.log("Player " + username + " connected!");
+	var player = Player(socket.id, username);
 	socket.on('keyPress', function(data){
 		if(data.inputId === 'left')
 			player.move_left = data.state;
@@ -117,7 +126,7 @@ Player.update = function(){
 		package.push({
 			x:player.x,
 			y:player.y,
-			number: player.number
+			number: player.name
 		});
 	}
 
@@ -170,9 +179,10 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('signIn', function(data){
+		console.log("Sign in request!");
 		validateUser(data, function(res){
 			if(res){
-				Player.onConnect(socket);
+				Player.onConnect(socket, data.username);
 				socket.emit('signInResponse', {success:true});
 			}
 			else{
@@ -189,11 +199,17 @@ io.sockets.on('connection', function(socket){
 		Player.onDisconnect(socket);
 	});
 
-	socket.on('sendMsgToServer', function(msg){
-		var player_name = ("" + socket.id).slice(2,7);
+	socket.on('sendMsgToServer', function(data){
+		var player_name = data.username;
+		// var player_name = ("" + socket.id).slice(2,7);
 		for(var i in SOCKET_LIST){
-			SOCKET_LIST[i].emit('addToChat', player_name + ': ' + msg);
+			SOCKET_LIST[i].emit('addToChat', player_name + ': ' + data.msg);
 		}
+	});
+
+	socket.on('window_shape', function(data){
+		window_height = data.height;
+		window_width = data.width;
 	});
 
 });
@@ -209,4 +225,4 @@ setInterval(function(){
 		socket.emit('newPositions', package);
 	}
 
-}, 1000/25);
+}, 1000/10);
