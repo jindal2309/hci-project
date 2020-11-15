@@ -1,8 +1,34 @@
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script>
+    const ROOM_ID = "RMS"
+  </script>
+  <script defer src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <script src="script.js" defer></script>
+  <title>Document</title>
+
+
 <style type="text/css">
-    body {
-        overflow: hidden;
+
+    #video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 300px);
+      grid-auto-rows: 300px;
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
     }
 </style>
+
+</head>
+
 
 <div id="signDiv">
 	Username: <input id="signDiv-username" type="text"></input><br>
@@ -21,7 +47,10 @@
 	<form id="chat-form">
 		<input id="chat-input" type="text" style="width:500px"></input>
 	</form>
+
 </div>
+
+<div id="video-grid"></div>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 
@@ -49,6 +78,7 @@
 	socket.on('signInResponse',function(data){
 		if(data.success){
 			// socket.emit('set_payer_name', {username:signDivUsername.value});
+			socket.emit('join-room', {roomId:ROOM_ID, userId: signDivUsername.value});
 			signDiv.style.display = 'none';
 			gameDiv.style.display = 'inline-block';		//Equivalent of visible
 			var cc = document.getElementById("ctx")

@@ -4,6 +4,45 @@ var server = require('http').Server(app)
 var io = require('socket.io')(server,{});
 var mongojs = require("mongojs");
 
+
+////////////////////////////////
+
+// const express = require('express')
+// const app2 = express()
+// const server2 = require('http').Server(app2)
+// const io2 = require('socket.io')(server2)
+// const { v4: uuidV4 } = require('uuid')
+
+// //app2.set('view engine', 'ejs')
+// app2.use(express.static('public'))
+
+// app2.get('/', (req, res) => {
+//   res.redirect(`/${uuidV4()}`)
+// })
+
+// app.get('/:room', (req, res) => {
+//   res.render('room', { roomId: req.params.room })
+// })
+
+// io2.on('connection', socket => {
+//   socket.on('join-room', (roomId, userId) => {
+//     socket.join(roomId)
+//     socket.to(roomId).broadcast.emit('user-connected', userId)
+
+//     socket.on('disconnect', () => {
+//       socket.to(roomId).broadcast.emit('user-disconnected', userId)
+//     })
+//   })
+// })
+
+
+// server2.listen(3000, '0.0.0.0')
+
+///////////////////////////
+
+
+
+
 var db = mongojs("localhost:27017/titans", ['account','additional_info']);
 
 var SOCKET_LIST = {};
@@ -90,6 +129,10 @@ window_width = 0;
 
 app.get('/',function(req,res){
 	res.sendFile(__dirname + '/client/index.html');
+});
+
+app.get('/script.js',function(req,res){
+	res.sendFile(__dirname + '/client/script.js');
 });
 
 app.use('/client', express.static(__dirname + '/client'));
@@ -183,6 +226,7 @@ io.sockets.on('connection', function(socket){
 		validateUser(data, function(res){
 			if(res){
 				Player.onConnect(socket, data.username);
+
 				socket.emit('signInResponse', {success:true});
 			}
 			else{
@@ -211,6 +255,17 @@ io.sockets.on('connection', function(socket){
 		window_height = data.height;
 		window_width = data.width;
 	});
+
+
+	socket.on('join-room', function(data){
+	    socket.join(data.roomId)
+	    socket.to(data.roomId).broadcast.emit('user-connected', data.userId)
+	    console.log("User ID " + data.userId + " Room Id " + data.roomId)
+
+	    socket.on('disconnect', () => {
+	      socket.to(data.roomId).broadcast.emit('user-disconnected', data.userId)
+	    })
+	  });
 
 });
 
