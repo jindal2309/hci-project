@@ -1,4 +1,4 @@
-
+<html>
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -6,9 +6,9 @@
   <script>
     const ROOM_ID = "RMS"
   </script>
-  <script defer src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
-  <script src="/socket.io/socket.io.js" defer></script>
-  <script src="script.js" defer></script>
+  <script src="https://unpkg.com/peerjs@1.2.0/dist/peerjs.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="script.js"></script>
   <title>Document</title>
 
 
@@ -29,7 +29,7 @@
 
 </head>
 
-
+<body>
 <div id="signDiv">
 	Username: <input id="signDiv-username" type="text"></input><br>
 	Password: <input id="signDiv-password" type="password"></input>
@@ -67,6 +67,18 @@
 
 	let screenObj = window.screen;
 
+	var STREAM = null;
+
+	const videoGrid = document.getElementById('video-grid')
+	const myPeer = new Peer(undefined, {
+		host: '/',
+		port: '3001'
+	})
+	const myVideo = document.createElement('video')
+
+	myVideo.muted = true
+	const peers = {}
+
 	// width: 1800px; height: 800px;
 	
 	signDivSignIn.onclick = function(){
@@ -78,7 +90,18 @@
 	socket.on('signInResponse',function(data){
 		if(data.success){
 			// socket.emit('set_payer_name', {username:signDivUsername.value});
-			socket.emit('join-room', {roomId:ROOM_ID, userId: signDivUsername.value});
+
+			navigator.mediaDevices.getUserMedia({
+				video: true,
+				audio: true
+				}).then(stream => {
+					STREAM = stream;
+					console.log("Inside media devices: " + stream)
+				addVideoStream(myVideo, stream, videoGrid)
+			})
+
+
+			// socket.emit('join-room', {roomId:ROOM_ID, userId: signDivUsername.value});
 			signDiv.style.display = 'none';
 			gameDiv.style.display = 'inline-block';		//Equivalent of visible
 			var cc = document.getElementById("ctx")
@@ -88,6 +111,32 @@
 		} else
 			alert("Invalid Username or Password.");
 	});
+	setTimeout(function(){return 0}, 2000);
+
+	myPeer.on('call', call => {
+		call.answer(STREAM)
+		console.log("connecting stream object:" + STREAM)
+		const video2 = document.createElement('video')
+		call.on('stream', userVideoStream => {
+			addVideoStream(video2, userVideoStream, videoGrid)
+		})
+	});
+
+	myPeer.on('open', id => {
+		console.log("join room called for " + ROOM_ID + ":" + id)
+		socket.emit('join-room', ROOM_ID, id)
+	});
+
+	socket.on('user-connected', userId => {
+		console.log("user-connected : User ID" + userId)
+		connectToNewUser(userId, STREAM, myPeer)
+	})
+
+	socket.on('user-disconnected', userId => {
+	if (peers[userId]) peers[userId].close()
+	})
+
+
 	socket.on('signUpResponse',function(data){
 		if(data.success){
 			alert("Sign up successul.");
@@ -154,3 +203,5 @@
 	}
 
 </script>
+</body>
+</html>

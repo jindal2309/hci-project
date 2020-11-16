@@ -77,7 +77,7 @@ var Entity = function(){
 	return self;
 }
 
-var Player = function(id, username){
+var Player = function(id, username, userId){
 
 	var self = Entity();
 	self.id = id;
@@ -88,6 +88,7 @@ var Player = function(id, username){
 	self.move_down = false;
 	self.speed = 10;
 	self.name = username;
+	self.userId = userId;
 	
 	var super_update = self.update;
 	self.update = function(){
@@ -256,18 +257,34 @@ io.sockets.on('connection', function(socket){
 		window_width = data.width;
 	});
 
+    // io.on('connection', socket => {
+	// socket.on('join-room', function(data){
+	//     socket.join(data.roomId)
+	//     socket.to(data.roomId).broadcast.emit('user-connected', data.userId)
+	//     console.log("User ID " + data.userId + " Room Id " + data.roomId)
 
-	socket.on('join-room', function(data){
-	    socket.join(data.roomId)
-	    socket.to(data.roomId).broadcast.emit('user-connected', data.userId)
-	    console.log("User ID " + data.userId + " Room Id " + data.roomId)
+	//     socket.on('disconnect', () => {
+	//       socket.to(data.roomId).broadcast.emit('user-disconnected', data.userId)
+	//     	})
+	//   })
+	// })
 
-	    socket.on('disconnect', () => {
-	      socket.to(data.roomId).broadcast.emit('user-disconnected', data.userId)
-	    })
-	  });
+	socket.on('join-room', (roomId, userId) => {
+		socket.join(roomId)
+		console.log("ENtered join room: " + roomId + " : " + userId)
+		// socket.to(roomId).broadcast.emit('user-connected', "abc")
+		socket.emit('user-connected', "abc")
+		console.log("After")
+	
+		socket.on('disconnect', () => {
+		  socket.to(roomId).broadcast.emit('user-disconnected', userId)
+		})
+	  })
+})
 
-});
+// io.on('connection', socket => {
+  
+// })
 
 setInterval(function(){
 
