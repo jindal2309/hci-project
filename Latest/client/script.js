@@ -42,27 +42,27 @@
 // })
 
 
-function connectToNewUser(userId, stream, myPeer) {
-  console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
-  const call = myPeer.call(userId, stream)
-  const video = document.createElement('video')
-  console.log("connect a new user:" + userId)
-  call.on('stream', userVideoStream => {
-    addVideoStream(video, userVideoStream)
-  })
-  call.on('close', () => {
-    video.remove()
-  })
+// function connectToNewUser(userId, stream, myPeer, peers) {
+//   console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
+//   const call = myPeer.call(userId, stream)
+//   const video = document.createElement('video')
+//   console.log("connect a new user:" + userId)
+//   call.on('stream', userVideoStream => {
+//     addVideoStream(video, userVideoStream)
+//   })
+//   call.on('close', () => {
+//     video.remove()
+//   })
 
-  peers[userId] = call
-}
+//   peers[userId] = call
+// }
 
-function addVideoStream(video, stream, videoGrid) {
-  video.srcObject = stream
-  video.addEventListener('loadedmetadata', () => {
-    console.log("Got here!!!!!")
-    video.play()
-  })
-  console.log("Adding video:" + video + "video grid:" + videoGrid)
-  videoGrid.append(video)
-}
+// function addVideoStream(video, stream, videoGrid) {
+//   video.srcObject = stream
+//   video.addEventListener('loadedmetadata', () => {
+//     console.log("Got here!!!!!")
+//     video.play()
+//   })
+//   console.log("Adding video:" + video + "video grid:" + videoGrid)
+//   videoGrid.append(video)
+// }

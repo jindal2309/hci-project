@@ -4,6 +4,9 @@ var server = require('http').Server(app)
 var io = require('socket.io')(server,{});
 var mongojs = require("mongojs");
 
+// var Uuid = require('uuid')
+// var uuid = Uuid();
+const uuidv4 = require("uuid/v4")
 
 ////////////////////////////////
 
@@ -88,7 +91,7 @@ var Player = function(id, username, userId){
 	self.move_down = false;
 	self.speed = 10;
 	self.name = username;
-	self.userId = userId;
+	self.userId = null;
 	
 	var super_update = self.update;
 	self.update = function(){
@@ -142,9 +145,10 @@ server.listen(8001);
 console.log("Server listening at 8001");
 
 Player.onConnect = function(socket, username){
-	socket.emit('getShape', {});
+	socket.emit('getShape', {roomId: uuidv4()});
 	console.log("Player " + username + " connected!");
 	var player = Player(socket.id, username);
+
 	socket.on('keyPress', function(data){
 		if(data.inputId === 'left')
 			player.move_left = data.state;
@@ -154,7 +158,23 @@ Player.onConnect = function(socket, username){
 			player.move_up = data.state;
 		else if(data.inputId === 'down')
 			player.move_down = data.state;
-	});
+	})
+
+
+	// socket.on('join-room', (roomId, userId) => {
+	// 	socket.join(roomId)
+	// 	player.userId = userId
+	// 	console.log("ENtered join room: " + roomId + " : " + userId)
+	// 	socket.to(roomId).broadcast.emit('user-connected', userId)
+	// 	socket.emit('user-connected', "abc")
+	// 	console.log("After")
+	
+	// 	socket.on('disconnect', () => {
+	// 	  socket.to(roomId).broadcast.emit('user-disconnected', userId)
+	// 	  delete SOCKET_LIST[socket.id];
+	// 	  Player.onDisconnect(socket);
+	// 	})
+	// })
 }
 
 Player.onDisconnect = function(socket){
@@ -227,7 +247,6 @@ io.sockets.on('connection', function(socket){
 		validateUser(data, function(res){
 			if(res){
 				Player.onConnect(socket, data.username);
-
 				socket.emit('signInResponse', {success:true});
 			}
 			else{
@@ -239,10 +258,10 @@ io.sockets.on('connection', function(socket){
 	
 	console.log('Connection established with: ' + socket.id);
 
-	socket.on('disconnect', function(){
-		delete SOCKET_LIST[socket.id];
-		Player.onDisconnect(socket);
-	});
+	// socket.on('disconnect', function(){
+	// 	delete SOCKET_LIST[socket.id];
+	// 	Player.onDisconnect(socket);
+	// });
 
 	socket.on('sendMsgToServer', function(data){
 		var player_name = data.username;
@@ -269,17 +288,30 @@ io.sockets.on('connection', function(socket){
 	//   })
 	// })
 
-	socket.on('join-room', (roomId, userId) => {
+
+	socket.on('join-room', (roomId, userId, username) => {
 		socket.join(roomId)
+		// Player.list[socket.id].userId = userId;
+		for(var i in Player.list){
+			var p = Player.list[i];
+			if(p.name == username){
+				console.log("Found p " + username)
+				p.userId = userId;
+			}
+		}
+
 		console.log("ENtered join room: " + roomId + " : " + userId)
-		// socket.to(roomId).broadcast.emit('user-connected', "abc")
-		socket.emit('user-connected', "abc")
+		socket.broadcast.emit('user-connected', userId)
 		console.log("After")
 	
 		socket.on('disconnect', () => {
-		  socket.to(roomId).broadcast.emit('user-disconnected', userId)
+		  // socket.to(roomId).broadcast.emit('user-disconnected', userId)
+		  socket.broadcast.emit('user-disconnected', userId)
+		  delete SOCKET_LIST[socket.id];
+		  Player.onDisconnect(socket);
 		})
-	  })
+	})
+
 })
 
 // io.on('connection', socket => {
