@@ -63,9 +63,8 @@
 	var signDivPassword = document.getElementById('signDiv-password');
 
 	let screenObj = window.screen;
-
-	var STREAM = null;
 	var ROOM_ID = "RMS"
+	var uid = null;
 
 	const videoGrid = document.getElementById('video-grid')
 	// var myPeer = new Peer()
@@ -84,62 +83,18 @@
 	}
 	socket.on('signInResponse',function(data){
 		if(data.success){
-			// socket.emit('set_payer_name', {username:signDivUsername.value});
-
+			
 			navigator.mediaDevices.getUserMedia({
 				video: true,
 				audio: true
 				}).then(stream => {
-					STREAM = stream;
-					console.log("Inside media devices: " + stream)
-				addVideoStream(myVideo, stream, videoGrid)
-
-				// myVideo.srcObject = stream
-			 //    myVideo.addEventListener('loadedmetadata', () => {
-			 //      console.log("Got here!!!!!")
-			 //      myVideo.play()
-			 //    })
-			 //    console.log("Adding video:" + myVideo + "video grid:" + videoGrid)
-			 //    videoGrid.append(myVideo)
-
-
+					
 				const myPeer = new Peer(undefined, {
 					host: '/',
 					port: '3001'
-				})
+				});
 
-				socket.on('user-connected', userId => {
-					console.log("user-connected : User ID" + userId)
-
-					connectToNewUser(userId, stream, myPeer, videoGrid);
-					// console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
-					// const call = myPeer.call(userId, stream)
-					// const video = document.createElement('video')
-					// console.log("connect a new user:" + userId)
-					// call.on('stream', userVideoStream => {
-					//     addVideoStream(video, userVideoStream, videoGrid)
-
-					    // video.srcObject = userVideoStream
-					    // video.addEventListener('loadedmetadata', () => {
-					    //   console.log("Got here!!!!!")
-					    //   video.play()
-					    // })
-					    // console.log("Adding video:" + video + "video grid:" + videoGrid)
-					    // videoGrid.append(video)
-
-					// })
-					// call.on('close', () => {
-					//     video.remove()
-					// })
-
-					// peers[userId] = call
-					// connectToNewUser(userId, STREAM, myPeer)
-				})
-
-				myPeer.on('open', id => {
-					console.log("join room called for " + ROOM_ID + ":" + id)
-					socket.emit('join-room', ROOM_ID, id, signDivUsername.value)
-				})
+				addVideoStream(myVideo, stream, videoGrid);
 
 				myPeer.on('call', call => {
 					call.answer(stream)
@@ -149,11 +104,21 @@
 						addVideoStream(video, userVideoStream, videoGrid)
 					})
 				})
+
+				socket.on('user-connected', userId => {
+					console.log("user-connected : User ID" + userId)
+					if(userId != uid)
+						connectToNewUser(userId, stream, myPeer, videoGrid);
+				})
+
+				myPeer.on('open', id => {
+					console.log("join room called for " + ROOM_ID + ":" + id)
+					uid = id;
+					socket.emit('join-room', ROOM_ID, id, signDivUsername.value)
+				})
+
 			})
 
-
-			// socket.emit('join-room', {roomId:ROOM_ID, userId: signDivUsername.value});
-			// socket.emit('join-room', ROOM_ID, signDivUsername.value)
 
 			signDiv.style.display = 'none';
 			gameDiv.style.display = 'inline-block';		//Equivalent of visible
@@ -196,6 +161,7 @@
 	  })
 	  console.log("Adding video:" + video + "video grid:" + videoGrid)
 	  videoGrid.append(video)
+
 	}
 
 
