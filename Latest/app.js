@@ -3,52 +3,12 @@ var app= express();
 var server = require('http').Server(app)
 var io = require('socket.io')(server,{});
 var mongojs = require("mongojs");
-
-// var Uuid = require('uuid')
-// var uuid = Uuid();
 const uuidv4 = require("uuid/v4")
-
-////////////////////////////////
-
-// const express = require('express')
-// const app2 = express()
-// const server2 = require('http').Server(app2)
-// const io2 = require('socket.io')(server2)
-// const { v4: uuidV4 } = require('uuid')
-
-// //app2.set('view engine', 'ejs')
-// app2.use(express.static('public'))
-
-// app2.get('/', (req, res) => {
-//   res.redirect(`/${uuidV4()}`)
-// })
-
-// app.get('/:room', (req, res) => {
-//   res.render('room', { roomId: req.params.room })
-// })
-
-// io2.on('connection', socket => {
-//   socket.on('join-room', (roomId, userId) => {
-//     socket.join(roomId)
-//     socket.to(roomId).broadcast.emit('user-connected', userId)
-
-//     socket.on('disconnect', () => {
-//       socket.to(roomId).broadcast.emit('user-disconnected', userId)
-//     })
-//   })
-// })
-
-
-// server2.listen(3000, '0.0.0.0')
-
-///////////////////////////
-
-
-
-
 var db = mongojs("localhost:27017/titans", ['account','additional_info']);
-
 var SOCKET_LIST = {};
+var connected_users = new Set();
+var window_height = 0;
+var window_width = 0;
 
 var Entity = function(){
 	
@@ -80,7 +40,8 @@ var Entity = function(){
 	return self;
 }
 
-var Player = function(id, username, userId){
+
+var Player = function(id, username){
 
 	var self = Entity();
 	self.id = id;
@@ -92,18 +53,34 @@ var Player = function(id, username, userId){
 	self.speed = 10;
 	self.name = username;
 	self.userId = null;
+	self.connected_peers =  new Set();
+	self.meeting_history = new Set();
 	
 	var super_update = self.update;
 	self.update = function(){
 		self.updateSpd();
 		super_update();
 
-		// for(var i in Player.list){
-		// 	var p = Player.list[i];
-		// 	if(self.getDistance(p) < 64 && self.id !== p.id){
-		// 		socket.emit('vicinity', 'p: ' + p.id);
-		// 	}
-		// }
+		var socket = SOCKET_LIST[self.id];
+
+		for(var i in Player.list){
+			var p = Player.list[i];
+			if(self.getDistance(p) < 64 && self.id !== p.id){
+				if(self.connected_peers.has(p.userId) == false){
+					self.connected_peers.add(p.userId);
+					self.meeting_history.add(p.userId);
+					socket.emit('user-connected', p.userId);
+				}
+			}
+
+			else
+			{
+				if(self.connected_peers.has(p.userId) == true){
+					self.connected_peers.delete(p.userId);
+					socket.broadcast.emit('delete-feed', p.userId)
+				}
+			}
+		}
 	}
 
 	self.updateSpd = function(){
@@ -128,8 +105,6 @@ var Player = function(id, username, userId){
 }
 
 Player.list = {};
-window_height = 0;
-window_width = 0;
 
 app.get('/',function(req,res){
 	res.sendFile(__dirname + '/client/index.html');
@@ -160,24 +135,10 @@ Player.onConnect = function(socket, username){
 			player.move_down = data.state;
 	})
 
-
-	// socket.on('join-room', (roomId, userId) => {
-	// 	socket.join(roomId)
-	// 	player.userId = userId
-	// 	console.log("ENtered join room: " + roomId + " : " + userId)
-	// 	socket.to(roomId).broadcast.emit('user-connected', userId)
-	// 	socket.emit('user-connected', "abc")
-	// 	console.log("After")
-	
-	// 	socket.on('disconnect', () => {
-	// 	  socket.to(roomId).broadcast.emit('user-disconnected', userId)
-	// 	  delete SOCKET_LIST[socket.id];
-	// 	  Player.onDisconnect(socket);
-	// 	})
-	// })
 }
 
 Player.onDisconnect = function(socket){
+	
 	delete Player.list[socket.id];
 }
 
@@ -258,10 +219,6 @@ io.sockets.on('connection', function(socket){
 	
 	console.log('Connection established with: ' + socket.id);
 
-	// socket.on('disconnect', function(){
-	// 	delete SOCKET_LIST[socket.id];
-	// 	Player.onDisconnect(socket);
-	// });
 
 	socket.on('sendMsgToServer', function(data){
 		var player_name = data.username;
@@ -276,18 +233,6 @@ io.sockets.on('connection', function(socket){
 		window_width = data.width;
 	});
 
-    // io.on('connection', socket => {
-	// socket.on('join-room', function(data){
-	//     socket.join(data.roomId)
-	//     socket.to(data.roomId).broadcast.emit('user-connected', data.userId)
-	//     console.log("User ID " + data.userId + " Room Id " + data.roomId)
-
-	//     socket.on('disconnect', () => {
-	//       socket.to(data.roomId).broadcast.emit('user-disconnected', data.userId)
-	//     	})
-	//   })
-	// })
-
 
 	socket.on('join-room', (roomId, userId, username) => {
 		socket.join(roomId)
@@ -301,11 +246,10 @@ io.sockets.on('connection', function(socket){
 		}
 
 		console.log("ENtered join room: " + roomId + " : " + userId)
-		socket.broadcast.emit('user-connected', userId)
+		// socket.broadcast.emit('user-connected', userId)
 		console.log("After")
 	
 		socket.on('disconnect', () => {
-		  // socket.to(roomId).broadcast.emit('user-disconnected', userId)
 		  socket.broadcast.emit('user-disconnected', userId)
 		  delete SOCKET_LIST[socket.id];
 		  Player.onDisconnect(socket);
@@ -314,15 +258,10 @@ io.sockets.on('connection', function(socket){
 
 })
 
-// io.on('connection', socket => {
-  
-// })
 
 setInterval(function(){
 
 	var package = {player: Player.update()}
-
-	// var nearby = {neighbor: Player.checkNearby()}
 
 	for(var i in SOCKET_LIST){
 		var socket = SOCKET_LIST[i];
