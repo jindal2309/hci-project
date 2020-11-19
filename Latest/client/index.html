@@ -10,44 +10,124 @@
 
 
 <style type="text/css">
+	body {
+		margin: 0;
+		font-family: Arial, Helvetica, sans-serif;
+		overflow: hidden;
+	}
+
+	#navDiv {
+		background-color: seagreen;
+		opacity: 0.9;
+		text-align: center;
+		color: white;
+		font-variant-caps: all-petite-caps;
+	}
+	
+	#signDiv {
+		border: 1px solid black;
+		border-radius: 5px;
+		width: 20%;
+		margin: 10% auto 15% auto;
+		padding: 4%;
+	}
+	#signDiv input {
+		width: 100%;
+		padding: 2%;
+		margin-bottom: 4%;
+		border: 1px solid black;
+		border-radius: 5px;
+	}
+	#signDiv button {
+		background-color:seagreen;
+		color: white;
+		padding: 14px 20px;
+		margin-top: 1%;
+		border: none;
+		cursor: pointer;
+		width: 49%;
+		opacity: 0.9;
+		border-radius: 5px;
+	}
+
+	#videoGameDiv {
+		float: left;
+		width: 79.9%;
+	}
+	#gameDiv canvas {
+		/* float: left; */
+		border:1px solid black;
+		margin: 0%;
+		padding: 0%;
+		width: 100%;
+		background: url("/client/map.png");
+		background-size: 100% 100%;
+	}
+
+	#chatDiv {
+		float: right;
+		width: 20%;
+	}
+	#chat-text {
+		border: 1px solid black;
+		margin: 0%;
+		padding: 0%;
+		overflow-y:scroll;
+		height: 89%;
+	}
+	#chat-form {
+		border: 1px solid black;
+	}
+	#chat-input {
+		width: 100%
+	}
 
     #video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, 300px);
-      grid-auto-rows: 300px;
+      grid-template-columns: repeat(auto-fill, 200px);
+	  grid-auto-rows: 200px;
     }
     
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
-    }
+	}
 </style>
 
 </head>
 
 <body>
-<div id="signDiv">
-	Username: <input id="signDiv-username" type="text"></input><br>
-	Password: <input id="signDiv-password" type="password"></input>
-	<button id="signDiv-signIn">Sign In</button>
-	<button id="signDiv-signUp">Sign Up</button>
-</div>
 
-<div id="gameDiv" style="display:none;">
-	<canvas id="ctx" style="border:1px solid #000000;"></canvas>
-
-	<div id="chat-text" style="width:500px; height:20%; overflow-y:scroll">
-		<div>CHATBOX......</div>
+	<div id="navDiv">
+		<h2 style="padding: 1%; margin-bottom: 0%;">Reel the Real</h2>
 	</div>
-
-	<form id="chat-form">
-		<input id="chat-input" type="text" style="width:500px"></input>
-	</form>
-
-</div>
-
-<div id="video-grid"></div>
+	
+	<div id="signDiv">
+		Username: <input id="signDiv-username" type="text"></input><br>
+		Password: <input id="signDiv-password" type="password"></input><br>
+		<button id="signDiv-signIn">Sign In</button>
+		<button id="signDiv-signUp">Sign Up</button>
+	</div>
+	
+	<div id="videoGameDiv" style="display:none;">
+		<div id="video-grid"></div>
+	
+		<div id="gameDiv">
+			<canvas id="ctx"></canvas>
+		</div>
+	</div>
+	
+	<div id="chatDiv" style="display:none;">
+		<div id="chat-text">
+			<div style="text-align: center; font-variant-caps: all-petite-caps; font-size: large; padding: 1%;">CHAT BOX</div>
+		</div>
+	
+		<form id="chat-form">
+			<input id="chat-input" type="text"></input>
+		</form>
+	
+	</div>
 
 <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
 
@@ -141,7 +221,8 @@
 
 
 			signDiv.style.display = 'none';
-			gameDiv.style.display = 'inline-block';		//Equivalent of visible
+			videoGameDiv.style.display = 'inline-block';		//Equivalent of visible
+			chatDiv.style.display = 'inline-block';		//Equivalent of visible
 			var cc = document.getElementById("ctx")
 			cc.width  = window.innerWidth*90/100;
 			cc.height = window.innerHeight*75/100;
@@ -219,7 +300,11 @@
 		ctx.clearRect(0, 0, window.innerWidth*90/100, window.innerHeight*75/100);
 
 		for (var i = 0; i < data.player.length; i++) {
-			ctx.fillText(data.player[i].number, data.player[i].x, data.player[i].y);
+			avatar = document.createElement('img');
+			src = 'https://robohash.org/' + data.player[i].number;
+			avatar.src = src;
+			console.log(avatar)
+			ctx.drawImage(avatar, data.player[i].x, data.player[i].y, 50, 50);
 		}
 	});
 
