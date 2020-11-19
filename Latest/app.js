@@ -7,8 +7,8 @@ const uuidv4 = require("uuid/v4")
 var db = mongojs("localhost:27017/titans", ['account','additional_info']);
 var SOCKET_LIST = {};
 var connected_users = new Set();
-var window_height = 0;
-var window_width = 0;
+var window_height = 1;
+var window_width = 1;
 
 var Entity = function(){
 	
@@ -50,7 +50,7 @@ var Player = function(id, username){
 	self.move_right = false;
 	self.move_up = false;
 	self.move_down = false;
-	self.speed = 10;
+	self.speed = 1;
 	self.name = username;
 	self.userId = null;
 	self.connected_peers =  new Set();
@@ -77,7 +77,7 @@ var Player = function(id, username){
 			{
 				if(self.connected_peers.has(p.userId) == true){
 					self.connected_peers.delete(p.userId);
-					socket.broadcast.emit('delete-feed', p.userId)
+					socket.emit('delete-feed', p.userId)
 				}
 			}
 		}
@@ -93,9 +93,9 @@ var Player = function(id, username){
 			self.spdX = 0;
 
 		if(self.move_up)
-			self.spdY -= self.speed;
+			self.spdY -= self.speed*.75;
 		else if(self.move_down)
-			self.spdY += self.speed;
+			self.spdY += self.speed*.75;
 		else
 			self.spdY = 0;
 	}
@@ -223,8 +223,30 @@ io.sockets.on('connection', function(socket){
 	socket.on('sendMsgToServer', function(data){
 		var player_name = data.username;
 		// var player_name = ("" + socket.id).slice(2,7);
-		for(var i in SOCKET_LIST){
-			SOCKET_LIST[i].emit('addToChat', player_name + ': ' + data.msg);
+		if(data.msg[0] == "@"){
+			var to_name = data.msg.split(" ")[0].slice(1,);
+			var socket_id = -1;
+			for(var i in Player.list){
+				var p = Player.list[i];
+				if(p.name == to_name){
+					socket_id = p.id;
+					break;
+				}
+			}
+
+			if(socket_id !== -1){
+				SOCKET_LIST[socket_id].emit('addToChat', player_name + ' (Private): ' + data.msg.slice(to_name.length+2,));
+				SOCKET_LIST[socket.id].emit('addToChat', player_name + ' (Private @' + to_name + '): ' + data.msg.slice(to_name.length+2,));
+			}
+
+			else
+				SOCKET_LIST[socket.id].emit('addToChat', 'User "' + to_name + '" is not present in the field.');
+		}
+
+		else{
+			for(var i in SOCKET_LIST){
+				SOCKET_LIST[i].emit('addToChat', player_name + ': ' + data.msg);
+			}
 		}
 	});
 
@@ -268,4 +290,4 @@ setInterval(function(){
 		socket.emit('newPositions', package);
 	}
 
-}, 1000/10);
+}, 1000/50);

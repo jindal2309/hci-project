@@ -227,10 +227,6 @@
 		chatText.innerHTML += '<div>' + data + '</div>';
 	});
 
-	socket.on('vicinity', function(p){
-		console.log("Player " + p + " is in vicinity");
-	});
-
 	chatForm.onsubmit = function(e){
 		e.preventDefault();				// Prevent refreshing of page
 		socket.emit('sendMsgToServer',{username: signDivUsername.value, msg:chatInput.value});
