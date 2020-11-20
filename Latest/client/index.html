@@ -171,7 +171,9 @@
 					
 				const myPeer = new Peer(undefined, {
 					host: '/',
-					port: '3001'
+					port: '3001',
+					secure: true,
+					path : '/'
 				});
 
 				addVideoStream(myVideo, stream, videoGrid);
@@ -298,13 +300,14 @@
 
 	socket.on('newPositions', function(data){
 		ctx.clearRect(0, 0, window.innerWidth*90/100, window.innerHeight*75/100);
-
+		console.log(data.player.length)
 		for (var i = 0; i < data.player.length; i++) {
 			avatar = document.createElement('img');
 			src = 'https://robohash.org/' + data.player[i].number;
 			avatar.src = src;
-			console.log(avatar)
-			ctx.drawImage(avatar, data.player[i].x, data.player[i].y, 50, 50);
+		//	console.log(avatar)
+		    ctx.drawImage(avatar, data.player[i].x, data.player[i].y,50,50);
+			ctx.fillText(data.player[i].number, data.player[i].x + 15, data.player[i].y + 60);
 		}
 	});
 

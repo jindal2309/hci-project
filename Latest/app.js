@@ -1,6 +1,29 @@
 var express = require('express');
 var app= express();
-var server = require('http').Server(app)
+var https = require('https');
+const fs = require('fs');
+
+const options = {
+	  key: fs.readFileSync('key.pem'),
+	  cert: fs.readFileSync('cert.pem')
+};
+
+var server = https.Server(options, app)
+
+var privateKey  = fs.readFileSync('key.pem', 'utf8');
+var certificate = fs.readFileSync('cert.pem', 'utf8');
+
+const { PeerServer } = require('peer');
+const peerServer = PeerServer({ port: 3001, 
+                                path: '/' ,
+                                ssl: {
+                                    key: privateKey,
+                                    cert: certificate
+                                  }
+                            
+                            });
+
+
 var io = require('socket.io')(server,{});
 var mongojs = require("mongojs");
 const uuidv4 = require("uuid/v4")
@@ -65,7 +88,7 @@ var Player = function(id, username){
 
 		for(var i in Player.list){
 			var p = Player.list[i];
-			if(self.getDistance(p) < 64 && self.id !== p.id){
+			if(self.getDistance(p) < 220 && self.id !== p.id){
 				if(self.connected_peers.has(p.userId) == false){
 					self.connected_peers.add(p.userId);
 					self.meeting_history.add(p.userId);
@@ -290,4 +313,4 @@ setInterval(function(){
 		socket.emit('newPositions', package);
 	}
 
-}, 1000/50);
+}, 1000/100);
