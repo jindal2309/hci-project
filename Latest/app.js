@@ -36,8 +36,8 @@ var window_width = 1;
 var Entity = function(){
 	
 	var self = {
-		x:250,
-		y:250,
+		x:Math.floor(250 * Math.random()),
+		y:Math.floor(250 * Math.random()),
 		id:"",
 		number: ""+ Math.floor(10 * Math.random()),
 		spdX: 0,
@@ -49,11 +49,11 @@ var Entity = function(){
 	}
 
 	self.updatePosition = function(){
-		if(self.x + self.spdX <= window_width-10 && self.x + self.spdX >= 0)
+		if(self.x + self.spdX <= window_width && self.x + self.spdX >= 0)
 			self.x += self.spdX;
 		
-		if(self.y + self.spdY <= window_height && self.y + self.spdY >= 10)
-			self.y += self.spdY;
+		if(self.y + self.spdY <= window_height  && self.y + self.spdY >= 0)
+			self.y += self.spdY*0.75;
 	}	
 
 	self.getDistance = function(pt){
@@ -73,7 +73,7 @@ var Player = function(id, username){
 	self.move_right = false;
 	self.move_up = false;
 	self.move_down = false;
-	self.speed = 1;
+	self.speed = 0.5;
 	self.name = username;
 	self.userId = null;
 	self.connected_peers =  new Set();
@@ -144,7 +144,7 @@ console.log("Server listening at 8001");
 
 Player.onConnect = function(socket, username){
 	socket.emit('getShape', {roomId: uuidv4()});
-	console.log("Player " + username + " connected!");
+	// console.log("Player " + username + " connected!");
 	var player = Player(socket.id, username);
 
 	socket.on('keyPress', function(data){
@@ -227,7 +227,7 @@ io.sockets.on('connection', function(socket){
 	});
 
 	socket.on('signIn', function(data){
-		console.log("Sign in request!");
+		// console.log("Sign in request!");
 		validateUser(data, function(res){
 			if(res){
 				Player.onConnect(socket, data.username);
@@ -240,7 +240,7 @@ io.sockets.on('connection', function(socket){
 		
 	});
 	
-	console.log('Connection established with: ' + socket.id);
+	// console.log('Connection established with: ' + socket.id);
 
 
 	socket.on('sendMsgToServer', function(data){
@@ -285,14 +285,14 @@ io.sockets.on('connection', function(socket){
 		for(var i in Player.list){
 			var p = Player.list[i];
 			if(p.name == username){
-				console.log("Found p " + username)
+				// console.log("Found p " + username)
 				p.userId = userId;
 			}
 		}
 
-		console.log("ENtered join room: " + roomId + " : " + userId)
+		// console.log("ENtered join room: " + roomId + " : " + userId)
 		// socket.broadcast.emit('user-connected', userId)
-		console.log("After")
+		// console.log("After")
 	
 		socket.on('disconnect', () => {
 		  socket.broadcast.emit('user-disconnected', userId)

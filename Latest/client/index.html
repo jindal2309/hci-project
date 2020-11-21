@@ -73,7 +73,7 @@
 		margin: 0%;
 		padding: 0%;
 		overflow-y:scroll;
-		height: 89%;
+		height: 87.5%;
 	}
 	#chat-form {
 		border: 1px solid black;
@@ -84,8 +84,8 @@
 
     #video-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, 200px);
-	  grid-auto-rows: 200px;
+      grid-template-columns: repeat(auto-fill, 15%);
+	  grid-auto-rows: 150px;
     }
     
     video {
@@ -147,6 +147,7 @@
 	var uid = null;
 	var id_to_video = {};
 	var id_to_videostream = {};
+	var src = null;
 
 	const videoGrid = document.getElementById('video-grid')
 	// var myPeer = new Peer()
@@ -164,6 +165,7 @@
 	socket.on('signInResponse',function(data){
 		if(data.success){
 			
+			// src = 'https://robohash.org/' + signDivUsername.value;
 			navigator.mediaDevices.getUserMedia({
 				video: true,
 				audio: true
@@ -180,7 +182,7 @@
 
 				myPeer.on('call', call => {
 					call.answer(stream)
-					console.log("connecting stream object:" + stream)
+					// console.log("connecting stream object:" + stream)
 					const video = document.createElement('video')
 
 					call.on('stream', userVideoStream => {
@@ -193,7 +195,7 @@
 				})
 
 				socket.on('user-connected', userId => {
-					console.log("user-connected : User ID" + userId)
+					// console.log("user-connected : User ID" + userId)
 					if(userId != uid)
 						connectToNewUser(userId, stream, myPeer, videoGrid);
 				})
@@ -201,12 +203,12 @@
 
 
 				socket.on('insert-feed', userId => {
-					console.log("Inserting feed : User ID" + userId)
+					// console.log("Inserting feed : User ID" + userId)
 					const call = myPeer.call(userId, stream);
 				})
 
 				socket.on('delete-feed', userId => {
-					console.log("Deleting feed : User ID" + userId)
+					// console.log("Deleting feed : User ID" + userId)
 					if (peers[userId]) peers[userId].close();
 				})
 
@@ -214,7 +216,7 @@
 
 
 				myPeer.on('open', id => {
-					console.log("join room called for " + ROOM_ID + ":" + id)
+					// console.log("join room called for " + ROOM_ID + ":" + id)
 					uid = id;
 					socket.emit('join-room', ROOM_ID, id, signDivUsername.value)
 				})
@@ -242,11 +244,11 @@
 
 
 	function connectToNewUser(userId, stream, myPeer, videoGrid) {
-	  console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
+	  // console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
 	  const call = myPeer.call(userId, stream)
 	  const video = document.createElement('video')
 
-	  console.log("connect a new user:" + userId)
+	  // console.log("connect a new user:" + userId)
 	  call.on('stream', userVideoStream => {
 	  	id_to_videostream[userId] = userVideoStream;
 	    addVideoStream(video, userVideoStream, videoGrid, userId)
@@ -264,10 +266,10 @@
 	  if(userId !== uid){
 		  video.srcObject = stream
 		  video.addEventListener('loadedmetadata', () => {
-		    console.log("Got here!!!!!")
+		    // console.log("Got here!!!!!")
 		    video.play()
 		  })
-		  console.log("Adding video for userId:" + userId)
+		  // console.log("Adding video for userId:" + userId)
 		  // id_to_video[userId] = video;
 		  videoGrid.append(video)
 		}
@@ -284,8 +286,8 @@
 
 	socket.on('getShape', function(data){
 		// ROOM_ID = data.roomId;
-		console.log("Rooooooom Id:" + ROOM_ID);
-		socket.emit('window_shape', {height: window.innerHeight*75/100, width: window.innerWidth*90/100});
+		// console.log("Rooooooom Id:" + ROOM_ID);
+		socket.emit('window_shape', {height: window.innerHeight*70/100, width: window.innerWidth*88/100});
 	});
 
 
@@ -298,9 +300,10 @@
 	var ctx = document.getElementById("ctx").getContext("2d");
 	ctx.font = '30px Arial';
 
+
 	socket.on('newPositions', function(data){
 		ctx.clearRect(0, 0, window.innerWidth*90/100, window.innerHeight*75/100);
-		console.log(data.player.length)
+		// console.log(data.player.length)
 		for (var i = 0; i < data.player.length; i++) {
 			avatar = document.createElement('img');
 			src = 'https://robohash.org/' + data.player[i].number;
