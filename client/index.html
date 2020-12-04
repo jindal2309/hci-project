@@ -1,0 +1,351 @@
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <script src="https://unpkg.com/peerjs@1.3.1/dist/peerjs.min.js"></script>
+  <script src="/socket.io/socket.io.js" defer></script>
+  <!-- <script src="script.js" defer></script> -->
+  <title>Document</title>
+
+
+<style type="text/css">
+	body {
+		margin: 0;
+		font-family: Arial, Helvetica, sans-serif;
+		overflow: hidden;
+	}
+
+	#navDiv {
+		background-color: seagreen;
+		opacity: 0.9;
+		text-align: center;
+		color: white;
+		font-variant-caps: all-petite-caps;
+	}
+	
+	#signDiv {
+		border: 1px solid black;
+		border-radius: 5px;
+		width: 20%;
+		margin: 10% auto 15% auto;
+		padding: 4%;
+	}
+	#signDiv input {
+		width: 100%;
+		padding: 2%;
+		margin-bottom: 4%;
+		border: 1px solid black;
+		border-radius: 5px;
+	}
+	#signDiv button {
+		background-color:seagreen;
+		color: white;
+		padding: 14px 20px;
+		margin-top: 1%;
+		border: none;
+		cursor: pointer;
+		width: 49%;
+		opacity: 0.9;
+		border-radius: 5px;
+	}
+
+	#videoGameDiv {
+		float: left;
+		width: 79.9%;
+	}
+	#gameDiv canvas {
+		/* float: left; */
+		border:1px solid black;
+		margin: 0%;
+		padding: 0%;
+		width: 100%;
+		background: url("/client/map.png");
+		background-size: 100% 100%;
+	}
+
+	#chatDiv {
+		float: right;
+		width: 20%;
+	}
+	#chat-text {
+		border: 1px solid black;
+		margin: 0%;
+		padding: 0%;
+		overflow-y:scroll;
+		height: 87.5%;
+	}
+	#chat-form {
+		border: 1px solid black;
+	}
+	#chat-input {
+		width: 100%
+	}
+
+    #video-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, 15%);
+	  grid-auto-rows: 150px;
+    }
+    
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+	}
+</style>
+
+</head>
+
+<body>
+
+	<div id="navDiv">
+		<h2 style="padding: 1%; margin-bottom: 0%;">Reel the Real</h2>
+	</div>
+	
+	<div id="signDiv">
+		Username: <input id="signDiv-username" type="text"></input><br>
+		Password: <input id="signDiv-password" type="password"></input><br>
+		<button id="signDiv-signIn">Sign In</button>
+		<button id="signDiv-signUp">Sign Up</button>
+	</div>
+	
+	<div id="videoGameDiv" style="display:none;">
+		<div id="video-grid"></div>
+	
+		<div id="gameDiv">
+			<canvas id="ctx"></canvas>
+		</div>
+	</div>
+	
+	<div id="chatDiv" style="display:none;">
+		<div id="chat-text">
+			<div style="text-align: center; font-variant-caps: all-petite-caps; font-size: large; padding: 1%;">CHAT BOX</div>
+		</div>
+	
+		<form id="chat-form">
+			<input id="chat-input" type="text"></input>
+		</form>
+	
+	</div>
+
+<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+
+<script>
+	var socket = io();
+
+	//Signing
+
+	var signDiv = document.getElementById('signDiv');
+	var signDivUsername = document.getElementById('signDiv-username');
+	var signDivSignIn = document.getElementById('signDiv-signIn');
+	var signDivSignUp = document.getElementById('signDiv-signUp');
+	var signDivPassword = document.getElementById('signDiv-password');
+
+	let screenObj = window.screen;
+	var ROOM_ID = "RMS"
+	var uid = null;
+	var id_to_video = {};
+	var id_to_videostream = {};
+	var src = null;
+
+	const videoGrid = document.getElementById('video-grid')
+	// var myPeer = new Peer()
+	const myVideo = document.createElement('video')
+
+	myVideo.muted = true
+	const peers = {}
+	
+	signDivSignIn.onclick = function(){
+		socket.emit('signIn',{username:signDivUsername.value,password:signDivPassword.value});
+	}
+	signDivSignUp.onclick = function(){
+		socket.emit('signUp',{username:signDivUsername.value,password:signDivPassword.value});
+	}
+	socket.on('signInResponse',function(data){
+		if(data.success){
+			
+			// src = 'https://robohash.org/' + signDivUsername.value;
+			navigator.mediaDevices.getUserMedia({
+				video: true,
+				audio: true
+				}).then(stream => {
+					
+				const myPeer = new Peer(undefined, {
+					host: '/',
+					port: '3001',
+					secure: true,
+					path : '/'
+				});
+
+				addVideoStream(myVideo, stream, videoGrid);
+
+				myPeer.on('call', call => {
+					call.answer(stream)
+					// console.log("connecting stream object:" + stream)
+					const video = document.createElement('video')
+
+					call.on('stream', userVideoStream => {
+						addVideoStream(video, userVideoStream, videoGrid, uid)
+					})
+
+					call.on('close', () => {
+					  video.remove()
+					})
+				})
+
+				socket.on('user-connected', userId => {
+					// console.log("user-connected : User ID" + userId)
+					if(userId != uid)
+						connectToNewUser(userId, stream, myPeer, videoGrid);
+				})
+
+
+
+				socket.on('insert-feed', userId => {
+					// console.log("Inserting feed : User ID" + userId)
+					const call = myPeer.call(userId, stream);
+				})
+
+				socket.on('delete-feed', userId => {
+					// console.log("Deleting feed : User ID" + userId)
+					if (peers[userId]) peers[userId].close();
+				})
+
+
+
+
+				myPeer.on('open', id => {
+					// console.log("join room called for " + ROOM_ID + ":" + id)
+					uid = id;
+					socket.emit('join-room', ROOM_ID, id, signDivUsername.value)
+				})
+
+			})
+
+
+			signDiv.style.display = 'none';
+			videoGameDiv.style.display = 'inline-block';		//Equivalent of visible
+			chatDiv.style.display = 'inline-block';		//Equivalent of visible
+			var cc = document.getElementById("ctx")
+			cc.width  = window.innerWidth*90/100;
+			cc.height = window.innerHeight*75/100;
+
+		} else
+			alert("Invalid Username or Password.");
+	});
+	// setTimeout(function(){return 0}, 2000);
+
+
+	socket.on('user-disconnected', userId => {
+	if (peers[userId]) peers[userId].close()
+	})
+
+
+
+	function connectToNewUser(userId, stream, myPeer, videoGrid) {
+	  // console.log("Inside connectnewuser, " + userId + " : " + stream + " : " + myPeer)
+	  const call = myPeer.call(userId, stream)
+	  const video = document.createElement('video')
+
+	  // console.log("connect a new user:" + userId)
+	  call.on('stream', userVideoStream => {
+	  	id_to_videostream[userId] = userVideoStream;
+	    addVideoStream(video, userVideoStream, videoGrid, userId)
+	  })
+	  call.on('close', () => {
+	    video.remove()
+	  })
+
+	  peers[userId] = call
+	}
+
+
+	function addVideoStream(video, stream, videoGrid, userId) {
+	  
+	  if(userId !== uid){
+		  video.srcObject = stream
+		  video.addEventListener('loadedmetadata', () => {
+		    // console.log("Got here!!!!!")
+		    video.play()
+		  })
+		  // console.log("Adding video for userId:" + userId)
+		  // id_to_video[userId] = video;
+		  videoGrid.append(video)
+		}
+	}
+
+
+
+	socket.on('signUpResponse',function(data){
+		if(data.success){
+			alert("Sign up successul.");
+		} else
+			alert("Username already in use!!");
+	});
+
+	socket.on('getShape', function(data){
+		// ROOM_ID = data.roomId;
+		// console.log("Rooooooom Id:" + ROOM_ID);
+		socket.emit('window_shape', {height: window.innerHeight*70/100, width: window.innerWidth*88/100});
+	});
+
+
+
+	// Gameplay
+	var chatText = document.getElementById('chat-text');
+	var chatInput = document.getElementById('chat-input');
+	var chatForm = document.getElementById('chat-form');
+
+	var ctx = document.getElementById("ctx").getContext("2d");
+	ctx.font = '30px Arial';
+
+
+	socket.on('newPositions', function(data){
+		ctx.clearRect(0, 0, window.innerWidth*90/100, window.innerHeight*75/100);
+		// console.log(data.player.length)
+		for (var i = 0; i < data.player.length; i++) {
+			avatar = document.createElement('img');
+			src = 'https://robohash.org/' + data.player[i].number;
+			avatar.src = src;
+		//	console.log(avatar)
+		    ctx.drawImage(avatar, data.player[i].x, data.player[i].y,50,50);
+			ctx.fillText(data.player[i].number, data.player[i].x + 15, data.player[i].y + 60);
+		}
+	});
+
+	socket.on('addToChat',function(data){
+		chatText.innerHTML += '<div>' + data + '</div>';
+	});
+
+	chatForm.onsubmit = function(e){
+		e.preventDefault();				// Prevent refreshing of page
+		socket.emit('sendMsgToServer',{username: signDivUsername.value, msg:chatInput.value});
+		chatInput.value = '';		
+	}
+
+	document.onkeydown = function(event){
+		if(event.keyCode == 39) //d
+			socket.emit('keyPress', {inputId:'right', state:true});
+		else if(event.keyCode == 40) //s
+			socket.emit('keyPress', {inputId:'down', state:true});
+		else if(event.keyCode == 37) //a
+			socket.emit('keyPress', {inputId:'left', state:true});
+		else if(event.keyCode == 38) //w
+			socket.emit('keyPress', {inputId:'up', state:true});
+	}
+
+	document.onkeyup = function(event){
+		if(event.keyCode == 39) //d
+			socket.emit('keyPress', {inputId:'right', state:false});
+		else if(event.keyCode == 40) //s
+			socket.emit('keyPress', {inputId:'down', state:false});
+		else if(event.keyCode == 37) //a
+			socket.emit('keyPress', {inputId:'left', state:false});
+		else if(event.keyCode == 38) //w
+			socket.emit('keyPress', {inputId:'up', state:false});
+	}
+
+</script>
+</body>
+</html>
